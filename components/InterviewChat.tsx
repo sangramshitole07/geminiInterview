@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, Bot, User, Sparkles, Clock } from 'lucide-react';
+import { MessageSquare, Send, Bot, User, Sparkles, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useInterviewState } from '@/hooks/use-interview-state';
@@ -25,19 +25,22 @@ export function InterviewChat({ isPopupOpen, onTogglePopup }: InterviewChatProps
   const { selectedLanguage, responses, getAverageScore } = useInterviewState();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isFetchingOlderMessages, setIsFetchingOlderMessages] = useState(false);
+  
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // A more robust auto-scrolling function
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
 
+  // Effect to handle initial welcome message
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    if (isPopupOpen && messages.length === 0) {
-      // Add welcome message when chat opens
+    if (isPopupOpen && messages.length === 0 && selectedLanguage) {
       setMessages([
         {
           id: 'welcome',
@@ -50,8 +53,53 @@ Let's begin with your first question!`,
           timestamp: new Date(),
         }
       ]);
+      // Scroll to bottom after initial message is rendered
+      setTimeout(scrollToBottom, 50); 
     }
-  }, [isPopupOpen, selectedLanguage]);
+  }, [isPopupOpen, selectedLanguage, messages.length, scrollToBottom]);
+
+  // Core auto-scrolling effect for new messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom]);
+
+  // Simulated fetch for older messages (for endless scroll)
+  const fetchOlderMessages = useCallback(() => {
+    if (isFetchingOlderMessages) return;
+
+    setIsFetchingOlderMessages(true);
+    console.log('Fetching older messages...');
+
+    // Simulate network delay
+    setTimeout(() => {
+      const olderMessages: ChatMessage[] = [
+        // Dummy data for demonstration
+        {
+          id: (Date.now() - 3).toString(),
+          type: 'assistant',
+          content: 'This is a past question I asked you.',
+          timestamp: new Date(Date.now() - 100000),
+        },
+        {
+          id: (Date.now() - 2).toString(),
+          type: 'user',
+          content: 'This is a past answer I gave.',
+          timestamp: new Date(Date.now() - 90000),
+        }
+      ];
+      setMessages(prev => [...olderMessages, ...prev]);
+      setIsFetchingOlderMessages(false);
+    }, 1500);
+  }, [isFetchingOlderMessages]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    // Check if the user has scrolled to the top
+    if (e.currentTarget.scrollTop === 0) {
+      fetchOlderMessages();
+    }
+  };
 
   const handleSendMessage = (content: string) => {
     if (!content.trim()) return;
@@ -66,7 +114,8 @@ Let's begin with your first question!`,
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
 
-    // Simulate AI response (in real app, this would come from CopilotKit)
+    // This is where your real CopilotKit API call would go
+    // For this example, we'll keep the simulated response
     setTimeout(() => {
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -92,6 +141,20 @@ Can you explain how you would handle error cases in this scenario?`,
     }, 2000);
   };
 
+  const handleInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputRef.current?.value) {
+      handleSendMessage(inputRef.current.value);
+      inputRef.current.value = '';
+    }
+  };
+
+  const handleSendButtonClick = () => {
+    if (inputRef.current?.value) {
+      handleSendMessage(inputRef.current.value);
+      inputRef.current.value = '';
+    }
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -112,7 +175,25 @@ Can you explain how you would handle error cases in this scenario?`,
       </CardHeader>
       
       <CardContent className="p-0 flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div 
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+        >
+          {/* Loading older messages indicator */}
+          <AnimatePresence>
+            {isFetchingOlderMessages && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-center py-2"
+              >
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <AnimatePresence>
             {messages.map((message) => (
               <motion.div
@@ -188,24 +269,14 @@ Can you explain how you would handle error cases in this scenario?`,
         <div className="border-t p-4">
           <div className="flex space-x-2">
             <input
+              ref={inputRef}
               type="text"
               placeholder="Type your answer here..."
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSendMessage(e.currentTarget.value);
-                  e.currentTarget.value = '';
-                }
-              }}
+              onKeyPress={handleInputKeyPress}
             />
             <Button
-              onClick={() => {
-                const input = document.querySelector('input') as HTMLInputElement;
-                if (input?.value) {
-                  handleSendMessage(input.value);
-                  input.value = '';
-                }
-              }}
+              onClick={handleSendButtonClick}
               className="bg-blue-500 hover:bg-blue-600"
             >
               <Send className="w-4 h-4" />
@@ -219,4 +290,4 @@ Can you explain how you would handle error cases in this scenario?`,
       </CardContent>
     </Card>
   );
-} 
+}

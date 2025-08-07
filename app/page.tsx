@@ -770,40 +770,38 @@ export default function InterviewApp() {
                   {/* CopilotChat with Gemini-like styling */}
                   <AnimatePresence>
                     {isInterviewerChatOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="w-full"
-                      >
-                        <Card className="shadow-xl border-0 overflow-hidden bg-white">
-                          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                                <Brain className="w-4 h-4 text-white" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-900">🤖 {selectedLanguage} Interviewer</h3>
-                                <p className="text-sm text-gray-600">AI-powered technical interview session</p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="h-[70vh] flex flex-col bg-white">
-                            <div className="flex-1 overflow-hidden">
-                              <CopilotChat
-                                instructions={INTERVIEWER_PROMPT}
-                                labels={{
-                                  title: `🤖 ${selectedLanguage} Interviewer`,
-                                  initial: `Welcome to your ${selectedLanguage} interview. Let's begin when you are ready.`,
-                                  placeholder: 'Your answer...',
-                                }}
-                                className="h-full"
-                              />
-                            </div>
-                          </div>
-                        </Card>
-                      </motion.div>
+                     <motion.div
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -20 }}
+                     transition={{ duration: 0.5 }}
+                     className="w-full"
+                   >
+                     <Card className="shadow-xl border-0 overflow-hidden bg-white flex flex-col h-[70vh]">
+                       <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b">
+                         <div className="flex items-center space-x-3">
+                           <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                             <Brain className="w-4 h-4 text-white" />
+                           </div>
+                           <div>
+                             <h3 className="font-semibold text-gray-900">🤖 {selectedLanguage} Interviewer</h3>
+                             <p className="text-sm text-gray-600">AI-powered technical interview session</p>
+                           </div>
+                         </div>
+                       </div>
+                       <div className="flex-1 overflow-auto">
+                         <CopilotChat
+                           instructions={INTERVIEWER_PROMPT}
+                           labels={{
+                             title: `🤖 ${selectedLanguage} Interviewer`,
+                             initial: `Welcome to your ${selectedLanguage} interview. Let's begin when you are ready.`,
+                             placeholder: 'Your answer...',
+                           }}
+                           className="h-full"
+                         />
+                       </div>
+                     </Card>
+                   </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
